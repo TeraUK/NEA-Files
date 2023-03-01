@@ -1,0 +1,335 @@
+//newest
+using System.ComponentModel;
+using System.Drawing;
+using System.Runtime.Intrinsics.X86;
+using System.Security.Cryptography.X509Certificates;
+
+namespace Maze_Gen_2
+{
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            MazeGen MazeGen = new MazeGen();
+        }
+    }
+
+    class MazeGen
+    {
+        public MazeGen()
+        {
+            bool run = true;
+            string? input = "";
+            do
+            {
+                int Size_Y;
+                bool run2 = true;
+                do
+                {
+                    Console.WriteLine("how big would you like the maze to be? - or press a to end");
+                    input = Console.ReadLine();
+
+                    if (Int32.TryParse(input, out Size_Y) == true)
+                    {
+                        run2 = false;
+                    }
+                    else if (input.ToUpper() == "A")
+                    {
+                        run2 = false;
+                    }
+                } while (run2 == true);
+
+
+
+                if (input.ToUpper() != "A")
+                {
+                    int Size_X = ((Size_Y * 2) - 1);
+                    int[,] Bitfield = new int[Size_X, Size_Y];
+                    Stack<int> RandomMoves = new Stack<int>();
+                    List<int[]> Visited = new List<int[]>();
+                    Stack<int[]> Movements = new Stack<int[]>();
+
+                    Movements.Push(new int[] { 1, 1 });
+                    Visited.Add(new int[] { 1, 1 });
+
+                    CreateArray(Size_X, Size_Y, Bitfield);
+
+                    Algorithm2(Size_Y, Size_X, Bitfield, RandomMoves, Visited, Movements);
+
+                    DrawArray(Size_X, Size_Y, Bitfield);
+                }
+                else
+                {
+                    run = false;
+                }
+            } while (run == true);
+        }
+
+        public void Algorithm(int Size_Y, int Size_X, int[,] Bitfield, Stack<int> RandomMoves, List<int[]> Visited, Stack<int[]> Movements)
+        {
+            RandomMoves = GetMoveList(RandomMoves);
+            bool loop = true;
+
+            while (loop)
+            {
+                switch (CheckIfValid(Size_X, Size_Y, RandomMoves, Visited, Movements))
+                {
+                    case 1:
+                        RandomMoves.Pop();
+                        break;
+                    case 2:
+                        loop = false;
+
+                        CreatePassage(Size_Y, Size_X, Bitfield, RandomMoves, Visited, Movements);
+                        int[] temp1 = GetNextCell(RandomMoves, Movements);
+                        Movements.Push(new int[2] { temp1[0], temp1[1] });
+                        Visited.Add(new int[2] { temp1[0], temp1[1] });
+
+                        if ((Convert.ToInt16(Movements.Peek()[0])) != 1 || (Convert.ToInt16(Movements.Peek()[1])) != 1)
+                        {
+                            Algorithm(Size_Y, Size_X, Bitfield, RandomMoves, Visited, Movements);
+                        }
+
+                        break;
+                    case 3:
+                        if ((Convert.ToInt16(Movements.Peek()[0])) != 1 || (Convert.ToInt16(Movements.Peek()[1])) != 1)
+                        {
+                            Movements.Pop();
+                            Algorithm(Size_Y, Size_X, Bitfield, RandomMoves, Visited, Movements);
+                        }
+                        loop = false;
+                        break;
+                }
+            }
+        }
+
+        public void Algorithm2(int Size_Y, int Size_X, int[,] Bitfield, Stack<int> RandomMoves, List<int[]> Visited, Stack<int[]> Movements)
+        {
+            bool loop = true;
+
+            while(loop)
+            {
+                RandomMoves = GetMoveList(RandomMoves);
+                bool loop2 = true;
+
+                while(loop2)
+                {
+                    switch (CheckIfValid(Size_X, Size_Y, RandomMoves, Visited, Movements))
+                    {
+                        case 1:
+                            RandomMoves.Pop();
+                            break;
+                        case 2:
+                            loop2 = false;
+
+                            CreatePassage(Size_Y, Size_X, Bitfield, RandomMoves, Visited, Movements);
+                            int[] temp1 = GetNextCell(RandomMoves, Movements);
+                            Movements.Push(new int[2] { temp1[0], temp1[1] });
+                            Visited.Add(new int[2] { temp1[0], temp1[1] });
+
+                            if ((Convert.ToInt16(Movements.Peek()[0])) == 1 && (Convert.ToInt16(Movements.Peek()[1])) == 1)
+                            {
+                                loop = false;
+                                loop2 = false;
+                            }
+
+                            break;
+                            
+                        case 3:
+                            if ((Convert.ToInt16(Movements.Peek()[0])) == 1 && (Convert.ToInt16(Movements.Peek()[1])) == 1)
+                            {
+                                loop = false;
+                                loop2 = false;
+                            }
+                            Movements.Pop();
+                            loop2 = false;
+                            
+                            break;
+                    }
+                }
+
+            }
+        }
+        public void CreatePassage(int Size_Y, int Size_X, int[,] Bitfield, Stack<int> RandomMoves, List<int[]> Visited, Stack<int[]> Movements)
+        {
+            int[] temp = new int[2] { Movements.Peek()[0], Movements.Peek()[1] };
+
+            switch (RandomMoves.Peek())
+            {
+                case 1:
+                    temp[1] += 1;
+                    Bitfield[temp[0], temp[1]] = 0;
+                    break;
+                case 2:
+
+                    temp[0] += 1;
+                    Bitfield[temp[0], temp[1]] = 0;
+                    break;
+                case 3:
+                    temp[1] -= 1;
+                    Bitfield[temp[0], temp[1]] = 0;
+                    break;
+                case 4:
+                    temp[0] -= 1;
+                    Bitfield[temp[0], temp[1]] = 0;
+                    break;
+            }
+        }
+
+        int CheckIfValid(int Size_X, int Size_Y, Stack<int> RandomMoves, List<int[]> Visited, Stack<int[]> Movements)
+        {
+            if (RandomMoves.Count != 0)
+            {
+                int[] temp1 = GetNextCell(RandomMoves, Movements);
+                int[] nextcell = new int[2] { temp1[0], temp1[1] };
+                int count = 0;
+
+                foreach (var item in Visited)
+                {
+                    if (Visited[count][0] == nextcell[0])
+                    {
+                        if (Visited[count][1] == nextcell[1])
+                        {
+
+                            return 1;
+                        }
+                    }
+
+                    count++;
+                }
+                if (nextcell[1] >= (Size_Y - 1))
+                {
+
+                    return 1;
+                }
+                else if (nextcell[0] >= (Size_X - 1))
+                {
+
+                    return 1;
+                }
+                else if (nextcell[0] < 0)
+                {
+
+                    return 1;
+                }
+                else if (nextcell[1] < 0)
+                {
+
+                    return 1;
+                }
+                else if (nextcell[0] == 0 || nextcell[1] == 0)
+                {
+
+                    return 1;
+                }
+                else
+                {
+                    return 2;
+                }
+
+            }
+            else
+            {
+                return 3;
+            }
+
+        }
+
+        public void CreateArray(int Size_X, int Size_Y, int[,] Bitfield)
+        {
+            for (int y = 0; y < Size_Y; y++)
+            {
+                for (int x = 0; x < Size_X; x++)
+                {
+                    if (y == 0 || x == 0)
+                    {
+                        Bitfield[x, y] = 1;
+                    }
+                    else if (y % 2 == 0 || x % 2 == 0)
+                    {
+                        Bitfield[x, y] = 1;
+                    }
+                    else if ((y == Size_Y) || (x == Size_X))
+                    {
+                        Bitfield[x, y] = 1;
+                    }
+                    else
+                    {
+                        Bitfield[x, y] = 0;
+                    }
+
+                    Bitfield[Size_X - 1, Size_Y - 2] = 0;
+                    Bitfield[0, 1] = 0;
+                }
+            }
+        }
+
+        public Stack<int> GetMoveList(Stack<int> RandomMoves)
+        {
+            RandomMoves.Clear();
+            Random rnd = new Random();
+            bool go = true;
+
+            for (int n = 0; n < 4; n++)
+            {
+                go = true;
+                while (go)
+                {
+                    int number = rnd.Next(1, 5);
+                    if (RandomMoves.Contains(number) == false)
+                    {
+                        RandomMoves.Push(number);
+                        go = false;
+                    }
+                }
+            }
+            return RandomMoves;
+        }
+
+        public void DrawArray(int Size_X, int Size_Y, int[,] Bitfield)
+        {
+            for (int y = 0; y < Size_Y; y++)
+            {
+                for (int x = 0; x < Size_X; x++)
+                {
+                    Console.Write(Bitfield[x, y]);
+                }
+                Console.WriteLine("");
+            }
+        }
+
+        public int[] GetNextCell(Stack<int> RandomMoves, Stack<int[]> Movements)
+        {
+
+            int[] temp = new int[2] { Movements.Peek()[0], Movements.Peek()[1] };
+
+            switch (RandomMoves.Peek())
+            {
+                case 1:
+                    temp[1] = temp[1] + 2;
+
+                    break;
+                case 2:
+                    temp[0] = temp[0] + 2;
+
+                    break;
+                case 3:
+                    temp[1] = temp[1] - 2;
+
+                    break;
+                case 4:
+                    temp[0] = temp[0] - 2;
+                    break;
+            }
+
+            return temp;
+        }
+
+
+    }
+
+
+
+}
+
+
